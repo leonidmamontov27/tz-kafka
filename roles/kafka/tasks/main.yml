@@ -1,0 +1,101 @@
+- name: Create Kafka group
+  group:
+    name: "{{ kafka_group }}"
+    system: true
+
+- name: Create Kafka user
+  user:
+    name: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create Kafka directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0750"
+  loop:
+    - "{{ kafka_data_dir }}"
+    - "{{ kafka_log_dir }}"
+
+- name: Download Kafka archive
+  get_url:
+    url: "{{ kafka_download_url }}"
+    dest: "/tmp/kafka_{{ kafka_version }}.tgz"
+    mode: "0644"
+
+- name: Extract Kafka
+  unarchive:
+    src: "/tmp/kafka_{{ kafka_version }}.tgz"
+    dest: /opt
+    remote_src: true
+    creates: "/opt/kafka_{{ scala_version }}-{{ kafka_version }}"
+
+- name: Create Kafka symlink
+  file:
+    src: "/opt/kafka_{{ scala_version }}-{{ kafka_version }}"
+    dest: "{{ kafka_base_dir }}"
+    state: link
+    force: true
+
+- name: Set Kafka permissions
+  file:
+    path: "/opt/kafka_{{ scala_version }}-{{ kafka_version }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    recurse: true
+
+- name: Create Kafka config directory
+  file:
+    path: "{{ kafka_base_dir }}/config/kraft"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0750"
+
+- name: Configure Kafka
+  template:
+    src: server.properties.j2
+    dest: "{{ kafka_base_dir }}/config/kraft/server.properties"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0640"
+  notify: Restart Kafka
+
+- name: Check Kafka storage metadata
+  stat:
+    path: "{{ kafka_data_dir }}/meta.properties"
+  register: kafka_storage
+
+- name: Format Kafka storage
+  command:
+    argv:
+      - "{{ kafka_base_dir }}/bin/kafka-storage.sh"
+      - format
+      - --ignore-formatted
+      - --cluster-id
+      - "{{ kafka_cluster_id }}"
+      - --config
+      - "{{ kafka_base_dir }}/config/kraft/server.properties"
+  become_user: "{{ kafka_user }}"
+  when: not kafka_storage.stat.exists
+
+- name: Install Kafka systemd service
+  template:
+    src: kafka.service.j2
+    dest: /etc/systemd/system/kafka.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart Kafka
+
+- name: Enable and start Kafka
+  systemd:
+    name: kafka
+    enabled: true
+    state: started
+    daemon_reload: true

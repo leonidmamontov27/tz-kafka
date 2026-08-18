@@ -1,0 +1,21 @@
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+
+    container_name: kafka-ui
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+
+    environment:
+
+      KAFKA_CLUSTERS_0_NAME: production
+
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: >-
+        {% for host in groups['kafka'] %}
+        {{ hostvars[host]['ansible_host'] }}:{{ kafka_port }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+
+      DYNAMIC_CONFIG_ENABLED: "true"

@@ -1,0 +1,7 @@
+- name: Deploy Kafka cluster
+  hosts: kafka
+  become: true
+
+  roles:
+    - common
+    - kafka

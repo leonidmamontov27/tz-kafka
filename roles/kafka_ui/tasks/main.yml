@@ -1,0 +1,24 @@
+- name: Install Docker
+  apt:
+    name:
+      - docker.io
+      - docker-compose-v2
+    state: present
+    update_cache: true
+
+- name: Create Kafka UI directory
+  file:
+    path: /opt/kafka-ui
+    state: directory
+    mode: "0755"
+
+- name: Deploy Kafka UI
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/kafka-ui/docker-compose.yml
+    mode: "0644"
+
+- name: Start Kafka UI
+  command:
+    cmd: docker compose up -d
+    chdir: /opt/kafka-ui

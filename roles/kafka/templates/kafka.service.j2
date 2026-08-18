@@ -1,0 +1,26 @@
+[Unit]
+Description=Apache Kafka
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+User={{ kafka_user }}
+Group={{ kafka_group }}
+
+Environment="KAFKA_HEAP_OPTS={{ kafka_heap_opts }}"
+
+ExecStart={{ kafka_base_dir }}/bin/kafka-server-start.sh {{ kafka_base_dir }}/config/kraft/server.properties
+
+ExecStop={{ kafka_base_dir }}/bin/kafka-server-stop.sh
+
+Restart=always
+RestartSec=5
+
+TimeoutStopSec=90
+
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

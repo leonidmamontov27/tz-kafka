@@ -1,0 +1,6 @@
+- name: Configure Kafka topics
+  hosts: kafka
+  become: true
+
+  roles:
+    - kafka_topics

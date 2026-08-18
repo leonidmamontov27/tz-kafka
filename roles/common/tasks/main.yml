@@ -1,0 +1,27 @@
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - wget
+      - tar
+      - unzip
+      - ca-certificates
+      - openjdk-21-jre-headless
+    state: present
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Configure file descriptor limits
+  copy:
+    dest: /etc/security/limits.d/kafka.conf
+    mode: "0644"
+    content: |
+      kafka soft nofile 100000
+      kafka hard nofile 100000
